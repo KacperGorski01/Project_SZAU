@@ -1,14 +1,16 @@
 %% 
 clear; clc;
 
+%% Porównanie modelu nieliniowego i zlinearizowanego
+
 Tend = 20000;
 
 % Nieliniowy model dynamiczny
 
 function f = fNonlinear(t,h)
     tau = 125;
-    F1 = 200 + 100*(t-tau >= 1000) - 100*(t-tau >= 10000);
-    FD = 100 + 50*(t >= 6000) - 50*(t >= 10000);
+    F1 = 200 - 100*(t-tau >= 1000) + 100*(t-tau >= 10000);
+    FD = 100 - 50*(t >= 6000) + 50*(t >= 10000);
     f1 = ( F1 + FD - 23 * sqrt(h(1))) / (0.7 * h(1));
     f2 = ( 23 * sqrt(h(1)) - 30 * sqrt(h(2))) / (1.35 * h(2)^2);
     f = [f1; f2];
@@ -28,8 +30,8 @@ function f = fLinear(t,x)
     tau = 125;
     A = [-0.0074032, 0; 0.0000653, -0.00011111];
     B = [0.00839683, 0.00839683; 0, 0];
-    u1 = 100*(t-tau >= 1000) - 100*(t-tau >= 10000);
-    u2 = 50*(t >= 6000) - 50*(t >= 10000);
+    u1 = -100*(t-tau >= 1000) + 100*(t-tau >= 10000);
+    u2 = -50*(t >= 6000) + 50*(t >= 10000);
     f = A*x + B*[u1; u2];
 end
 
@@ -41,21 +43,21 @@ h2 = x(:,2) + 100;
 
 figure(1);
 sgtitle({
-    '$F_{in} = 200 + 100 \cdot (t \ge 1000) - 100 \cdot (t \ge 10000)$', ...
-    '$F_{D} = 100 + 50 \cdot (t \ge 6000) - 50 \cdot (t \ge 10000)$'
+    '$F_{in} = 200 - 100 \cdot (t \ge 1000) + 100 \cdot (t \ge 10000)$', ...
+    '$F_{D} = 100 - 50 \cdot (t \ge 6000) + 50 \cdot (t \ge 10000)$'
     }, 'Interpreter','latex','FontSize',14);
 subplot(2,1,1);
 hold on;
 plot(t, h(:,1), 'b', 'LineWidth', 1.5); 
 plot(t2, h1, 'r--', 'LineWidth', 1.5);
-legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'northwest');
+legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'southeast');
 grid on
 grid minor
 subplot(2,1,2);
 hold on;
 plot(t, h(:,2), 'b', 'LineWidth', 1.5); 
 plot(t2, h2, 'r--', 'LineWidth', 1.5);
-legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'northwest');
+legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'southeast');
 grid on;
 grid minor
 xlabel('Czas [s]');
