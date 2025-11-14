@@ -1,7 +1,5 @@
-%% 
-clear; clc;
-
 %% Porównanie modelu nieliniowego i zlinearizowanego
+clear; clc;
 
 Tend = 20000;
 
@@ -62,3 +60,129 @@ grid on;
 grid minor
 xlabel('Czas [s]');
 ylabel('Poziom cieczy [cm]');
+
+
+%% Konwencjonalny regulator DMC
+clear; clc;
+
+% x1 = delta_h1 = h1 - 170.1323
+% x2 = delta_h2 = h2 - 100
+% u1 = delta_F1 = F1 - 200
+% u2 = delta_FD = FD - 100
+% y = x2 = h2 - 100
+
+Ts = 1; % okres próbkowania dla regulatora DMC
+
+% ---------------------------------------------------------------
+% Identyfikacja skoku jednostkowego dla sterowania 
+
+tau = 125;
+A = [-0.0074032, 0; 0.0000653, -0.00011111];
+B = [0.00839683; 0];
+
+f1 = @(t_,x_) A*x_ + B*(t_ >= 0);
+[t, x] = ode45(f1, [0, 30000], [0; 0], odeset('RelTol',1e-6));
+y = x(:,2);
+
+T = Ts : Ts : 1000;        % wektor czasu próbkowania
+s = interp1(t, y, T);      % wektor odpowiedzi skokowej w chwilach próbkowania
+
+figure(1)
+hold on
+plot(t, y, '-', T, s, 'o')
+grid on
+grid minor
+
+%%
+
+% ---------------------------------------------------------------
+% Wyznaczenie macierzy DMC
+
+D = length(s);      % horyzont dynamiki
+N = round(D/3);     % horyzont predykcji
+Nu = 5;             % horyzont sterowania
+lambda = 2;         % współczynnik kary
+
+Mp = zeros(N, D-1);
+for i = 1 : N
+for j = 1 : D-1
+    if i + j <= D
+        Mp(i,j) = s(i + j) - s(j);
+    else
+        Mp(i,j) = s(D) - s(j);
+    end
+end
+end
+
+M = zeros(N, Nu);
+for i = 1 : N
+for j = 1 : Nu
+    if i >= j
+        M(i,j) = s(i - j + 1);
+    else
+        M(i,j) = 0;
+    end
+end
+end
+
+K = (M' * M + lambda * eye(Nu)) \ M';
+
+ke = sum(K(1,:));
+ku = K(1,:) * Mp;
+
+% ---------------------------------------------------------------
+% Symulacja działania regulatora DMC na modelu nieliniowym
+
+% Matlab numeruje indeksy od 1 !!!
+% Czyli dla indeksu 1 mamy chwilę '0*Ts sek', dla indeksu 2 mamy chwilę '1*Ts sek', itd.
+
+time = 0 : Ts : 20000;             % wektor czasu symulacji
+
+x = zeros(length(time), 2);     % wektor stanów
+x(1,:) = [0; 0];  % początkowa wartość stanów
+
+y = zeros(length(time), 1);     % wektor wyjść
+y(1) = x(1,2);                      % początkowa wartość wyjścia   
+
+y_zad = 5 * (time >= 5000) + 5 * (time >= 10000) - 5 * (time >= 15000);        % wartość zadana
+
+u = zeros(length(time), 1);     % wektor sterowań
+
+dUp = zeros(D-1, 1);            % wektor przyrostów sterowania z poprzednich kroków (początkowo zerowy)
+
+for k = 1 : length(time) - 1
+    % Obliczanie przyrostu sterowania
+    du = ke * (y_zad(k) - y(k)) - dot(ku, dUp);
+    
+    % Aktualizacja wektora przyrostów sterowania z poprzednich kroków
+    dUp = [du; dUp(1 : end - 1)];
+    
+    % Aktualizacja sterowania
+    if k > 1
+        u(k) = u(k - 1) + du;
+    else
+        u(k) = du; % dla k=1
+    end
+    
+    % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
+    f2 = @(t_,x_) A*x_ + B*u(k);
+    [~, x_temp] = ode45(f2, [time(k) time(k+1)], x(k,:), odeset('RelTol',1e-6));
+    x(k+1,:) = x_temp(end,:);
+    y(k+1) = x(k+1,2);
+end
+
+figure(2)
+hold on
+plot(time, y)
+plot(time, y_zad)
+grid on
+grid minor
+
+figure(3)
+hold on
+stairs(time, u)
+grid on
+grid minor
+
+
+
