@@ -19,6 +19,7 @@ h0 = [ 170.1323 ; 100 ];
 [t,h] = ode45(@fNonlinear, [0, Tend], h0, odeset('RelTol',1e-6));
 
 % Zlinearizowany model dynamiczny
+
 % x1 = delta_h1 = h1 - 170.1323
 % x2 = delta_h2 = h2 - 100
 % u1 = delta_F1 = F1 - 200
@@ -61,6 +62,9 @@ grid minor
 xlabel('Czas [s]');
 ylabel('Poziom cieczy [cm]');
 
+% Łatwo zauważyć, że h1 reaguje znacznie szybciej niż h2.
+% Bieguny: −0.0074032, −0.00011111
+
 
 %% Konwencjonalny regulator DMC
 clear; clc;
@@ -71,8 +75,6 @@ clear; clc;
 % u2 = delta_FD = FD - 100
 % y = x2 = h2 - 100
 
-Ts = 100; % okres próbkowania dla regulatora DMC
-
 % ---------------------------------------------------------------
 % Identyfikacja skoku jednostkowego dla sterowania 
 
@@ -80,13 +82,12 @@ tau = 125;
 A = [-0.0074032, 0; 0.0000653, -0.00011111];
 B = [0.00839683; 0];
 
-% Bieguny: −0.0074032, −0.00011111
-% wyjście y jest bardzo wolne
-
-f1 = @(t_,x_) A*x_ + B*(t_ >= 0);
+f1 = @(t_,x_) A*x_ + B*(t_ - tau >= 0);
 [t, x] = ode45(f1, [0, 70000], [0; 0], odeset('RelTol',1e-6));
 y = x(:,2);
 
+% wyjście y jest bardzo wolne
+Ts = 150; % okres próbkowania dla regulatora DMC
 T = Ts : Ts : 60000;        % wektor czasu próbkowania
 s = interp1(t, y, T);      % wektor odpowiedzi skokowej w chwilach próbkowania
 
@@ -96,13 +97,15 @@ plot(t, y, '-', T, s, 'o')
 grid on
 grid minor
 
+clear y x
+
 % ---------------------------------------------------------------
 % Wyznaczenie macierzy DMC
 
 D = length(s);      % horyzont dynamiki
 N = round(D/100);     % horyzont predykcji
 Nu = 10;             % horyzont sterowania
-lambda = 10;         % współczynnik kary
+lambda = 5;         % współczynnik kary
 
 Mp = zeros(N, D-1);
 for i = 1 : N
@@ -131,6 +134,8 @@ K = (M' * M + lambda * eye(Nu)) \ M';
 ke = sum(K(1,:));
 ku = K(1,:) * Mp;
 
+clear Mp M K s % czyścimy niepotrzebne zmienne z pamięci
+
 % ---------------------------------------------------------------
 % Symulacja działania regulatora DMC na modelu nieliniowym
 
@@ -139,13 +144,14 @@ ku = K(1,:) * Mp;
 
 time = 0 : Ts : 2000000;             % wektor czasu symulacji
 
-x = zeros(length(time), 2);     % wektor stanów
-x(1,:) = [0; 0];  % początkowa wartość stanów
+h = [10, 10];  % początkowa wartość stanów
+% Uwaga: Nie możemy mieć zer w wektorze stanów, bo w modelu występują dzielenia przez h1 i h2.
+% Zapewne można by się pozbć tego problemu przez modyfikację modelu, ale na potrzeby tego zadania zostawiamy już tak jak jest.
 
 y = zeros(length(time), 1);     % wektor wyjść
-y(1) = x(1,2);                      % początkowa wartość wyjścia   
+y(1) = h(1,2);                      % początkowa wartość wyjścia   
 
-y_zad = 5 * (time >= 500000) + 5 * (time >= 1000000) - 5 * (time >= 1500000);        % wartość zadana
+y_zad = 100 + 20 * (time >= 500000) + 20 * (time >= 1000000) - 20 * (time >= 1500000);        % wartość zadana
 
 u = zeros(length(time), 1);     % wektor sterowań
 
@@ -153,7 +159,15 @@ dUp = zeros(D-1, 1);            % wektor przyrostów sterowania z poprzednich kr
 
 for k = 1 : length(time) - 1
     % Obliczanie przyrostu sterowania
-    du = ke * (y_zad(k) - y(k)) - dot(ku, dUp);
+    % Stosujemy tutaj sztuczkę z przewidywaniem zadanej wartości na kilka
+    % kroków w przód - po dostrojeniu działa fajnie:)
+    nn = 200;
+    if k + nn <= length(y_zad)
+        Yzad = y_zad(k+nn);
+    else
+        Yzad = y_zad(end);
+    end
+    du = ke * (Yzad - y(k)) - dot(ku, dUp);
     
     % Aktualizacja wektora przyrostów sterowania z poprzednich kroków
     dUp = [du; dUp(1 : end - 1)];
@@ -166,22 +180,29 @@ for k = 1 : length(time) - 1
     end
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
-    f2 = @(t_,x_) A*x_ + B*u(k);
-    [~, x_temp] = ode45(f2, [time(k) time(k+1)], x(k,:), odeset('RelTol',1e-3));
-    x(k+1,:) = x_temp(end,:);
-    y(k+1) = x(k+1,2);
+    uk = u(k) + 200; % przesunięcie sterowania do oryginalnej skali
+    f2 = @(t_,h_) [
+        ( uk - 23 * sqrt(h_(1))) / (0.7 * (h_(1))) ;
+        ( 23 * sqrt(h_(1)) - 30 * sqrt(h_(2))) / (1.35 * (h_(2))^2)
+    ];
+    [~, h_temp] = ode45(f2, [time(k) time(k+1)], h, odeset('RelTol',1e-3));
+    h = h_temp(end,:);
+    y(k+1) = h(2);
 end
 
 figure(2)
+subplot(2,1,1)
 hold on
-plot(time, y)
-plot(time, y_zad)
+plot(time, y, 'LineWidth', 1.5)
+plot(time, y_zad, 'LineWidth', 1.5)
 grid on
 grid minor
-
-figure(3)
-hold on
-stairs(time, u)
+title('Wyjście y i wartość zadana [cm]')
+xlabel('Czas [s]')
+subplot(2,1,2)
+stairs(time, u, 'LineWidth', 1.5)
+title('Sterowanie u [cm^3/s]')
+xlabel('Czas [s]')
 grid on
 grid minor
 
