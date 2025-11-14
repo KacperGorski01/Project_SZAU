@@ -71,7 +71,7 @@ clear; clc;
 % u2 = delta_FD = FD - 100
 % y = x2 = h2 - 100
 
-Ts = 1; % okres próbkowania dla regulatora DMC
+Ts = 100; % okres próbkowania dla regulatora DMC
 
 % ---------------------------------------------------------------
 % Identyfikacja skoku jednostkowego dla sterowania 
@@ -80,11 +80,14 @@ tau = 125;
 A = [-0.0074032, 0; 0.0000653, -0.00011111];
 B = [0.00839683; 0];
 
+% Bieguny: −0.0074032, −0.00011111
+% wyjście y jest bardzo wolne
+
 f1 = @(t_,x_) A*x_ + B*(t_ >= 0);
-[t, x] = ode45(f1, [0, 30000], [0; 0], odeset('RelTol',1e-6));
+[t, x] = ode45(f1, [0, 70000], [0; 0], odeset('RelTol',1e-6));
 y = x(:,2);
 
-T = Ts : Ts : 1000;        % wektor czasu próbkowania
+T = Ts : Ts : 60000;        % wektor czasu próbkowania
 s = interp1(t, y, T);      % wektor odpowiedzi skokowej w chwilach próbkowania
 
 figure(1)
@@ -93,15 +96,13 @@ plot(t, y, '-', T, s, 'o')
 grid on
 grid minor
 
-%%
-
 % ---------------------------------------------------------------
 % Wyznaczenie macierzy DMC
 
 D = length(s);      % horyzont dynamiki
-N = round(D/3);     % horyzont predykcji
-Nu = 5;             % horyzont sterowania
-lambda = 2;         % współczynnik kary
+N = round(D/100);     % horyzont predykcji
+Nu = 10;             % horyzont sterowania
+lambda = 10;         % współczynnik kary
 
 Mp = zeros(N, D-1);
 for i = 1 : N
@@ -136,7 +137,7 @@ ku = K(1,:) * Mp;
 % Matlab numeruje indeksy od 1 !!!
 % Czyli dla indeksu 1 mamy chwilę '0*Ts sek', dla indeksu 2 mamy chwilę '1*Ts sek', itd.
 
-time = 0 : Ts : 20000;             % wektor czasu symulacji
+time = 0 : Ts : 2000000;             % wektor czasu symulacji
 
 x = zeros(length(time), 2);     % wektor stanów
 x(1,:) = [0; 0];  % początkowa wartość stanów
@@ -144,7 +145,7 @@ x(1,:) = [0; 0];  % początkowa wartość stanów
 y = zeros(length(time), 1);     % wektor wyjść
 y(1) = x(1,2);                      % początkowa wartość wyjścia   
 
-y_zad = 5 * (time >= 5000) + 5 * (time >= 10000) - 5 * (time >= 15000);        % wartość zadana
+y_zad = 5 * (time >= 500000) + 5 * (time >= 1000000) - 5 * (time >= 1500000);        % wartość zadana
 
 u = zeros(length(time), 1);     % wektor sterowań
 
@@ -166,7 +167,7 @@ for k = 1 : length(time) - 1
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
     f2 = @(t_,x_) A*x_ + B*u(k);
-    [~, x_temp] = ode45(f2, [time(k) time(k+1)], x(k,:), odeset('RelTol',1e-6));
+    [~, x_temp] = ode45(f2, [time(k) time(k+1)], x(k,:), odeset('RelTol',1e-3));
     x(k+1,:) = x_temp(end,:);
     y(k+1) = x(k+1,2);
 end
