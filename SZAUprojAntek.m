@@ -151,7 +151,8 @@ h = [10, 10];  % początkowa wartość stanów
 y = zeros(length(time), 1);     % wektor wyjść
 y(1) = h(1,2);                      % początkowa wartość wyjścia   
 
-y_zad = 100 + 20 * (time >= 500000) + 20 * (time >= 1000000) - 20 * (time >= 1500000);        % wartość zadana
+y_zad = 100 + 20 * (time >= 500000) - 20 * (time >= 1500000);        % wartość zadana
+Fd = 20 * (time >= 800000) - 20 * (time >= 1200000); % zakłócenie
 
 u = zeros(length(time), 1);     % wektor sterowań
 
@@ -180,9 +181,9 @@ for k = 1 : length(time) - 1
     end
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
-    uk = u(k) + 200; % przesunięcie sterowania do oryginalnej skali
+    Fin = u(k) + 200; % przesunięcie sterowania do oryginalnej skali
     f2 = @(t_,h_) [
-        ( uk - 23 * sqrt(h_(1))) / (0.7 * (h_(1))) ;
+        ( Fin + Fd(k) - 23 * sqrt(h_(1))) / (0.7 * (h_(1))) ;
         ( 23 * sqrt(h_(1)) - 30 * sqrt(h_(2))) / (1.35 * (h_(2))^2)
     ];
     [~, h_temp] = ode45(f2, [time(k) time(k+1)], h, odeset('RelTol',1e-3));
@@ -191,6 +192,7 @@ for k = 1 : length(time) - 1
 end
 
 figure(2)
+sgtitle('$F_D = 20 \cdot (t \ge 800000) - 20 \cdot (t \ge 1200000)$', 'Interpreter','latex','FontSize',14);
 subplot(2,1,1)
 hold on
 plot(time, y, 'LineWidth', 1.5)
@@ -205,6 +207,12 @@ title('Sterowanie u [cm^3/s]')
 xlabel('Czas [s]')
 grid on
 grid minor
+
+
+%%
+clear; clc;
+
+
 
 
 
