@@ -27,8 +27,8 @@ h0 = [ 170.1323 ; 100 ];
 
 function f = fLinear(t,x)
     tau = 125;
-    A = [-0.0074032, 0; 0.0000653, -0.00011111];
-    B = [0.00839683, 0.00839683; 0, 0];
+    A = [-0.00740320105820106, 0; 0.0000653086419753086, -0.000111111111111111];
+    B = [0.00839682539682540, 0.00839682539682540; 0, 0];
     u1 = -100*(t-tau >= 1000) + 100*(t-tau >= 10000);
     u2 = -50*(t >= 6000) + 50*(t >= 10000);
     f = A*x + B*[u1; u2];
@@ -69,42 +69,54 @@ ylabel('Poziom cieczy [cm]');
 %% Konwencjonalny regulator DMC
 clear; clc;
 
-% x1 = delta_h1 = h1 - 170.1323
-% x2 = delta_h2 = h2 - 100
-% u = delta_F1 = F1 - 200
-% y = x2 = h2 - 100
+% Punkt linearyzacji:
+Fin_point = 200; 
+Fd_point = 100;
+h1_point = ( 1/23 * (Fin_point + Fd_point) )^2;
+h2_point = ( 1/30 * (Fin_point + Fd_point) )^2;
 
 % ---------------------------------------------------------------
 % Identyfikacja skoku jednostkowego dla sterowania 
 
-tau = 125;
-A = [-0.0074032, 0; 0.0000653, -0.00011111];
-B = [0.00839683; 0];
-
-f1 = @(t_,x_) A*x_ + B*(t_ - tau >= 0);
-[t, x] = ode45(f1, [0, 70000], [0; 0], odeset('RelTol',1e-6));
-y = x(:,2);
-
-% wyjście y jest bardzo wolne
 Ts = 150; % okres próbkowania dla regulatora DMC
-T = Ts : Ts : 60000;        % wektor czasu próbkowania
-s = interp1(t, y, T);      % wektor odpowiedzi skokowej w chwilach próbkowania
+Tend = 50000;
+T = Ts : Ts : Tend;
+
+tau = 125;
+A = [-0.00740320105820106, 0; 0.0000653086419753086, -0.000111111111111111];
+B = [0.00839682539682540, 0.00839682539682540; 0, 0];
+
+f1 = @(t_,x_) A*x_ + B*[(t_ >= 0); 0];
+[t, x] = ode45(f1, [0, Tend], [0; 0], odeset('RelTol',1e-6));
+y1 = x(:,2);
+s1 = interp1(t, y1, T);
+
+f2 = @(t_,x_) A*x_ + B*[0; (t_ >= 0)];
+[t, x] = ode45(f2, [0, Tend], [0; 0], odeset('RelTol',1e-6));
+y2 = x(:,2);
+s2 = interp1(t, y2, T);
 
 figure(1)
 hold on
-plot(t, y, '-', T, s, 'o')
+plot(t, y1, '-', T, s1, 'o')
+plot(t, y2, '-', T, s2, 'o')
+title('Odpowiedzi skokowe modelu zlinearizowanego')
+xlabel('Czas [s]')
 grid on
 grid minor
 
-clear y x
+% Łatwo zauważyć, że odpowiedzi skokowe dla obu wejść są zawsze identyczne. Więc możemy przyjąć s = s1 = s2.
+s = s1;
+
+clear y1 y2 x s1 s2
 
 % ---------------------------------------------------------------
 % Wyznaczenie macierzy DMC
 
 D = length(s);      % horyzont dynamiki
-N = round(D/100);     % horyzont predykcji
-Nu = 10;             % horyzont sterowania
-lambda = 5;         % współczynnik kary
+N = round(D/100);   % horyzont predykcji
+Nu = 10;            % horyzont sterowania
+lambda = 4;         % współczynnik kary
 
 Mp = zeros(N, D-1);
 for i = 1 : N
@@ -129,11 +141,9 @@ end
 end
 
 K = (M' * M + lambda * eye(Nu)) \ M';
-
-ke = sum(K(1,:));
-ku = K(1,:) * Mp;
-
-clear Mp M K s % czyścimy niepotrzebne zmienne z pamięci
+K1 = K(1,:);  
+ke = sum(K1);  
+kp = K1 * Mp; 
 
 % ---------------------------------------------------------------
 % Symulacja działania regulatora DMC na modelu nieliniowym
@@ -141,48 +151,43 @@ clear Mp M K s % czyścimy niepotrzebne zmienne z pamięci
 % Matlab numeruje indeksy od 1 !!!
 % Czyli dla indeksu 1 mamy chwilę '0*Ts sek', dla indeksu 2 mamy chwilę '1*Ts sek', itd.
 
-time = 0 : Ts : 2000000;             % wektor czasu symulacji
+time = 0 : Ts : 2000000;             % czas symulacji
 
-h = [10, 10];  % początkowa wartość stanów
-% Uwaga: Nie możemy mieć zer w wektorze stanów, bo w modelu występują dzielenia przez h1 i h2.
-% Zapewne można by się pozbć tego problemu przez modyfikację modelu, ale na potrzeby tego zadania zostawiamy już tak jak jest.
+h = [170, 100];  % początkowa wartość stanów
 
 y = zeros(length(time), 1);     % wektor wyjść
-y(1) = h(1,2);                      % początkowa wartość wyjścia   
+y(1) = h(1,2);                  % początkowa wartość wyjścia   
 
 y_zad = 100 + 20 * (time >= 500000) - 20 * (time >= 1500000);        % wartość zadana
-Fd = 20 * (time >= 800000) - 20 * (time >= 1200000); % zakłócenie
+Fd = 100 + 10 * (time >= 800000) - 10 * (time >= 1200000);  % zakłócenia
 
-u = zeros(length(time), 1);     % wektor sterowań
+Fin = zeros(length(time), 1);     % wektor sterowań
 
-dUp = zeros(D-1, 1);            % wektor przyrostów sterowania z poprzednich kroków (początkowo zerowy)
+dUp1 = zeros(D-1, 1);            % wektor przyrostów sterowania z poprzednich kroków (początkowo zerowy)
+dUp2 = zeros(D-1, 1);            % wektor przyrostów zakłócenia z poprzednich kroków (początkowo zerowy)
+
 
 for k = 1 : length(time) - 1
-    % Obliczanie przyrostu sterowania
-    % Stosujemy tutaj sztuczkę z przewidywaniem zadanej wartości na kilka
-    % kroków w przód - po dostrojeniu działa fajnie:)
-    nn = 200;
-    if k + nn <= length(y_zad)
-        Yzad = y_zad(k+nn);
-    else
-        Yzad = y_zad(end);
+    % Aktualizacja wektora przyrostów zakłócenia z poprzednich kroków
+    if k > 1
+        dUp2 = [Fd(k) - Fd(k-1); dUp2(1 : end - 1)]; 
     end
-    du = ke * (Yzad - y(k)) - dot(ku, dUp);
-    
+
+    % Obliczanie przyrostu sterowania
+    du = ke * ( y_zad(k) - y(k) ) - dot(kp, dUp1 + dUp2);
     % Aktualizacja wektora przyrostów sterowania z poprzednich kroków
-    dUp = [du; dUp(1 : end - 1)];
+    dUp1 = [du; dUp1(1 : end - 1)];
     
     % Aktualizacja sterowania
     if k > 1
-        u(k) = u(k - 1) + du;
+        Fin(k) = Fin(k - 1) + du;
     else
-        u(k) = du; % dla k=1
+        Fin(k) = du + Fin_point; % dla k=1
     end
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
-    Fin = u(k) + 200; % przesunięcie sterowania do oryginalnej skali
     f2 = @(t_,h_) [
-        ( Fin + Fd(k) - 23 * sqrt(h_(1))) / (0.7 * (h_(1))) ;
+        ( Fin(k) + Fd(k) - 23 * sqrt(h_(1))) / (0.7 * (h_(1))) ;
         ( 23 * sqrt(h_(1)) - 30 * sqrt(h_(2))) / (1.35 * (h_(2))^2)
     ];
     [~, h_temp] = ode45(f2, [time(k) time(k+1)], h, odeset('RelTol',1e-3));
@@ -190,19 +195,30 @@ for k = 1 : length(time) - 1
     y(k+1) = h(2);
 end
 
+% poprawiamy ostatnią wartość sterowania, aby wykres był ładniejszy (zabieg kosmetyczny)
+Fin(end) = Fin(end-1);
+
 figure(2)
-sgtitle('$F_D = 20 \cdot (t \ge 800000) - 20 \cdot (t \ge 1200000)$', 'Interpreter','latex','FontSize',14);
-subplot(2,1,1)
+subplot(3,1,1)
 hold on
 plot(time, y, 'LineWidth', 1.5)
 plot(time, y_zad, 'LineWidth', 1.5)
+ylim([min(y)-5, max(y)+5])
 grid on
 grid minor
 title('Wyjście y i wartość zadana [cm]')
 xlabel('Czas [s]')
-subplot(2,1,2)
-stairs(time, u, 'LineWidth', 1.5)
-title('Sterowanie u [cm^3/s]')
+subplot(3,1,2)
+plot(time, Fin, 'LineWidth', 1.5)
+ylim([min(Fin)-5, max(Fin)+5])
+grid on
+grid minor
+title('Sterowanie F_{in} [cm^3/s]')
+xlabel('Czas [s]')
+subplot(3,1,3)
+plot(time, Fd, 'LineWidth', 1.5)
+ylim([min(Fd)-5, max(Fd)+5])
+title('Zakłócenie F_{D} [cm^3/s]')
 xlabel('Czas [s]')
 grid on
 grid minor
