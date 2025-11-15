@@ -71,8 +71,7 @@ clear; clc;
 
 % x1 = delta_h1 = h1 - 170.1323
 % x2 = delta_h2 = h2 - 100
-% u1 = delta_F1 = F1 - 200
-% u2 = delta_FD = FD - 100
+% u = delta_F1 = F1 - 200
 % y = x2 = h2 - 100
 
 % ---------------------------------------------------------------
@@ -209,7 +208,7 @@ grid on
 grid minor
 
 
-%%
+%% 
 clear; clc;
 
 
