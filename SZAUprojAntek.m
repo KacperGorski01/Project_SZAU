@@ -7,8 +7,8 @@ Tend = 20000;
 
 function f = fNonlinear(t,h)
     tau = 125;
-    F1 = 200 - 100*(t-tau >= 1000) + 100*(t-tau >= 10000);
-    FD = 100 - 50*(t >= 6000) + 50*(t >= 10000);
+    F1 = 200 + 150*(t-tau >= 1000) - 300*(t-tau >= 10000);
+    FD = 100 + 100*(t >= 6000) - 200*(t >= 15000);
     f1 = ( F1 + FD - 23 * sqrt(h(1))) / (0.7 * h(1));
     f2 = ( 23 * sqrt(h(1)) - 30 * sqrt(h(2))) / (1.35 * h(2)^2);
     f = [f1; f2];
@@ -29,8 +29,8 @@ function f = fLinear(t,x)
     tau = 125;
     A = [-0.00740320105820106, 0; 0.0000653086419753086, -0.000111111111111111];
     B = [0.00839682539682540, 0.00839682539682540; 0, 0];
-    u1 = -100*(t-tau >= 1000) + 100*(t-tau >= 10000);
-    u2 = -50*(t >= 6000) + 50*(t >= 10000);
+    u1 = 150*(t-tau >= 1000) - 300*(t-tau >= 10000);
+    u2 = 100*(t >= 6000) - 200*(t >= 15000);
     f = A*x + B*[u1; u2];
 end
 
@@ -42,21 +42,21 @@ h2 = x(:,2) + 100;
 
 figure(1);
 sgtitle({
-    '$F_{in} = 200 - 100 \cdot (t \ge 1000) + 100 \cdot (t \ge 10000)$', ...
-    '$F_{D} = 100 - 50 \cdot (t \ge 6000) + 50 \cdot (t \ge 10000)$'
+    '$F_{in} = 200 + 150 \cdot (t \ge 1000) - 300 \cdot (t \ge 10000)$', ...
+    '$F_{D} = 100 + 100 \cdot (t \ge 6000) - 200 \cdot (t \ge 15000)$'
     }, 'Interpreter','latex','FontSize',14);
 subplot(2,1,1);
 hold on;
 plot(t, h(:,1), 'b', 'LineWidth', 1.5); 
 plot(t2, h1, 'r--', 'LineWidth', 1.5);
-legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'southeast');
+legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'northeast');
 grid on
 grid minor
 subplot(2,1,2);
 hold on;
 plot(t, h(:,2), 'b', 'LineWidth', 1.5); 
 plot(t2, h2, 'r--', 'LineWidth', 1.5);
-legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'southeast');
+legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'northeast');
 grid on;
 grid minor
 xlabel('Czas [s]');
@@ -105,10 +105,11 @@ xlabel('Czas [s]')
 grid on
 grid minor
 
-% Łatwo zauważyć, że odpowiedzi skokowe dla obu wejść są zawsze identyczne. Więc możemy przyjąć s = s1 = s2.
+% Łatwo zauważyć, że odpowiedzi skokowe dla obu wejść są zawsze identyczne - i to nie zależnie od punktu w jakim linearyzujemy. 
+% Więc możemy przyjąć s = s1 = s2. (Macierze dynamiczne będą takie same)
 s = s1;
 
-clear y1 y2 x s1 s2
+clear t x y1 y2 s1 s2 T
 
 % ---------------------------------------------------------------
 % Wyznaczenie macierzy DMC
@@ -147,19 +148,18 @@ kp = K1 * Mp;
 
 % ---------------------------------------------------------------
 % Symulacja działania regulatora DMC na modelu nieliniowym
-
 % Matlab numeruje indeksy od 1 !!!
 % Czyli dla indeksu 1 mamy chwilę '0*Ts sek', dla indeksu 2 mamy chwilę '1*Ts sek', itd.
 
-time = 0 : Ts : 2000000;             % czas symulacji
+time = 0 : Ts : 1800000;             % czas symulacji
 
 h = [170, 100];  % początkowa wartość stanów
 
 y = zeros(length(time), 1);     % wektor wyjść
 y(1) = h(1,2);                  % początkowa wartość wyjścia   
 
-y_zad = 100 + 20 * (time >= 500000) - 20 * (time >= 1500000);        % wartość zadana
-Fd = 100 + 10 * (time >= 800000) - 10 * (time >= 1200000);  % zakłócenia
+y_zad = 100 + 20 * (time >= 400000) - 20 * (time >= 1000000);   % wartość zadana
+Fd = 100 + 100 * (time >= 700000) - 100 * (time >= 1300000);    % zakłócenia
 
 Fin = zeros(length(time), 1);     % wektor sterowań
 
@@ -182,7 +182,7 @@ for k = 1 : length(time) - 1
     if k > 1
         Fin(k) = Fin(k - 1) + du;
     else
-        Fin(k) = du + Fin_point; % dla k=1
+        Fin(k) = du + Fin_point; % dla k=1 mamy przyrost sterowania + steroanie z punktu równowagi
     end
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
@@ -195,9 +195,9 @@ for k = 1 : length(time) - 1
     y(k+1) = h(2);
 end
 
-% poprawiamy ostatnią wartość sterowania, aby wykres był ładniejszy (zabieg kosmetyczny)
+% rysujemy wykresy
+% (poprawiamy jeszcze ostatnią wartość sterowania, aby wykres był ładniejszy (zabieg kosmetyczny))
 Fin(end) = Fin(end-1);
-
 figure(2)
 subplot(3,1,1)
 hold on
