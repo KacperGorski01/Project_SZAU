@@ -1,15 +1,20 @@
 %% Porównanie modelu nieliniowego i zlinearizowanego
 clear; clc;
 
-Tend = 20000;
+Tend = 25000;
+
+% Uwaga:
+% Można zauważyć, że jakość dopasowania modelu zlinearyzowanego do
+% nieliniowego nie zależy osobno od F1 i Fd, ale od ich sumy F1+Fd.
+% Jest to zresztą zgodne z fizyką zagadnienia.
 
 
 %% ---------------------------------------------------------------
 % Linearyzacja modelu nieliniowego
 
 % Punkt linearyzacji (punkt równowagi):
-Fin_point = 300; % (F1_point)
-Fd_point = 100;
+Fin_point = 50; % (F1_point)
+Fd_point = 0;
 h1_point = ( 1/23 * (Fin_point + Fd_point) )^2;
 h2_point = ( 1/30 * (Fin_point + Fd_point) )^2;
 
@@ -25,12 +30,13 @@ B(1,2) = 1.42857142857143/h1_point;
 B(2,1) = 0;
 B(2,2) = 0;
 
+
 %% ---------------------------------------------------------------
 % Symulacja modeli nieliniowego i zlinearizowanego
 
 % Wychylenia od punktu równowagi:
-dF1 = @(t) 20*(t - 125 >= 1000) - 40*(t - 125 >= 10000);
-dFD = @(t) 20*(t >= 6000) - 40*(t >= 15000);
+dF1 = @(t) 4*(t - 125 >= 1000) - 4*(t - 125 >= 10000);
+dFD = @(t) 0*(t >= 6000) - 0*(t >= 15000);
 
 % Nieliniowy model dynamiczny
 h0 = [ h1_point ; h2_point ];
@@ -57,14 +63,8 @@ fLinear = @(t,dh) A*dh + B*[dF1(t); dFD(t)];
 hl = dhl + [h1_point, h2_point];
 
 
-%% ---------------------------------------------------------------
 % Rysowanie wyników
-
 figure(1);
-sgtitle({
-    '$F_{in} = 200 + 20 \cdot (t \ge 1000) - 40 \cdot (t \ge 10000)$', ...
-    '$F_{D} = 100 + 20 \cdot (t \ge 6000) - 40 \cdot (t \ge 15000)$'
-    }, 'Interpreter','latex','FontSize',14);
 subplot(2,1,1);
 hold on;
 plot(tn, hn(:,1), 'b', 'LineWidth', 1.5); 

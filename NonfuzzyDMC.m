@@ -123,15 +123,15 @@ for k = 1 : length(time) - 1
     end
 
     % Obliczanie przyrostu sterowania
-    du = ke * ( y_zad(k) - y(k) ) - dot(kp, dUp1 + dUp2);
+    du1 = ke * ( y_zad(k) - y(k) ) - dot(kp, dUp1 + dUp2);
     % Aktualizacja wektora przyrostów sterowania z poprzednich kroków
-    dUp1 = [du; dUp1(1 : end - 1)];
+    dUp1 = [du1; dUp1(1 : end - 1)];
     
     % Aktualizacja sterowania
     if k > 1
-        Fin(k) = Fin(k - 1) + du;
+        Fin(k) = Fin(k - 1) + du1;
     else
-        Fin(k) = du + Fin_point; % dla k=1 mamy przyrost sterowania + steroanie z punktu równowagi
+        Fin(k) = du1 + Fin_point; % dla k=1 mamy przyrost sterowania + steroanie z punktu równowagi
     end
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
