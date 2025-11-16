@@ -1,20 +1,22 @@
 %% Porównanie modelu nieliniowego i zlinearizowanego
 clear; clc;
 
-Tend = 25000;
+Tend = 100000;
 
 % Uwaga:
 % Można zauważyć, że jakość dopasowania modelu zlinearyzowanego do
 % nieliniowego nie zależy osobno od F1 i Fd, ale od ich sumy F1+Fd.
 % Jest to zresztą zgodne z fizyką zagadnienia.
+% Przybliżenie działa w miarę sensownie o ile wychylenie od 
+% sumy (z punktu linearyzacji-równowagi) nie przekracza +/-20%.
 
 
 %% ---------------------------------------------------------------
 % Linearyzacja modelu nieliniowego
 
 % Punkt linearyzacji (punkt równowagi):
-Fin_point = 50; % (F1_point)
-Fd_point = 0;
+Fin_point = 200; % (F1_point)
+Fd_point = 100;
 h1_point = ( 1/23 * (Fin_point + Fd_point) )^2;
 h2_point = ( 1/30 * (Fin_point + Fd_point) )^2;
 
@@ -35,8 +37,8 @@ B(2,2) = 0;
 % Symulacja modeli nieliniowego i zlinearizowanego
 
 % Wychylenia od punktu równowagi:
-dF1 = @(t) 4*(t - 125 >= 1000) - 4*(t - 125 >= 10000);
-dFD = @(t) 0*(t >= 6000) - 0*(t >= 15000);
+dF1 = @(t) 15*(t - 125 >= 1000) - 30*(t - 125 >= 50000);
+dFD = @(t) 15*(t >= 25000) - 30*(t >= 75000);
 
 % Nieliniowy model dynamiczny
 h0 = [ h1_point ; h2_point ];
