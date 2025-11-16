@@ -1,0 +1,85 @@
+%% Porównanie modelu nieliniowego i zlinearizowanego
+clear; clc;
+
+Tend = 20000;
+
+
+%% ---------------------------------------------------------------
+% Linearyzacja modelu nieliniowego
+
+% Punkt linearyzacji (punkt równowagi):
+Fin_point = 300; % (F1_point)
+Fd_point = 100;
+h1_point = ( 1/23 * (Fin_point + Fd_point) )^2;
+h2_point = ( 1/30 * (Fin_point + Fd_point) )^2;
+
+A = zeros(2,2);
+A(1,1) = -1.42857142857143*(Fin_point + Fd_point - 23*sqrt(h1_point))/h1_point^2 - 16.4285714285714/h1_point^(3/2);
+A(1,2) = 0;
+A(2,1) = 8.51851851851852/(sqrt(h1_point)*h2_point^2);
+A(2,2) = -1.48148148148148*(23*sqrt(h1_point) - 30*sqrt(h2_point))/h2_point^3 - 11.1111111111111/h2_point^(5/2);
+
+B = zeros(2,2);
+B(1,1) = 1.42857142857143/h1_point;
+B(1,2) = 1.42857142857143/h1_point;
+B(2,1) = 0;
+B(2,2) = 0;
+
+%% ---------------------------------------------------------------
+% Symulacja modeli nieliniowego i zlinearizowanego
+
+% Wychylenia od punktu równowagi:
+dF1 = @(t) 20*(t - 125 >= 1000) - 40*(t - 125 >= 10000);
+dFD = @(t) 20*(t >= 6000) - 40*(t >= 15000);
+
+% Nieliniowy model dynamiczny
+h0 = [ h1_point ; h2_point ];
+F1 = @(t) Fin_point + dF1(t);
+FD = @(t) Fd_point + dFD(t);
+
+fNonlinear = @(t,h) [ ...
+    ( F1(t) + FD(t) - 23 * sqrt(h(1))) / (0.7 * h(1)) ; ...
+    ( 23 * sqrt(h(1)) - 30 * sqrt(h(2))) / (1.35 * h(2)^2) ...
+];
+
+[tn,hn] = ode45(fNonlinear, [0, Tend], h0, odeset('RelTol',1e-6));
+
+% Zlinearizowany model dynamiczny
+
+% h1 = h1_point + dh1
+% h2 = h2_point + dh2
+% F1 = F1_point + dF1
+% FD = FD_point + dFD
+
+dh0 = [0; 0];
+fLinear = @(t,dh) A*dh + B*[dF1(t); dFD(t)];
+[tl, dhl] = ode45(fLinear, [0, Tend], dh0, odeset('RelTol',1e-6));
+hl = dhl + [h1_point, h2_point];
+
+
+%% ---------------------------------------------------------------
+% Rysowanie wyników
+
+figure(1);
+sgtitle({
+    '$F_{in} = 200 + 20 \cdot (t \ge 1000) - 40 \cdot (t \ge 10000)$', ...
+    '$F_{D} = 100 + 20 \cdot (t \ge 6000) - 40 \cdot (t \ge 15000)$'
+    }, 'Interpreter','latex','FontSize',14);
+subplot(2,1,1);
+hold on;
+plot(tn, hn(:,1), 'b', 'LineWidth', 1.5); 
+plot(tl, hl(:,1), 'r--', 'LineWidth', 1.5);
+legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'northeast');
+grid on
+grid minor
+subplot(2,1,2);
+hold on;
+plot(tn, hn(:,2), 'b', 'LineWidth', 1.5); 
+plot(tl, hl(:,2), 'r--', 'LineWidth', 1.5);
+legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'northeast');
+grid on;
+grid minor
+xlabel('Czas [s]');
+ylabel('Poziom cieczy [cm]');
+
+
