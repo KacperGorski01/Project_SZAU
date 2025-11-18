@@ -1,7 +1,7 @@
 %% Porównanie modelu nieliniowego i zlinearizowanego
 clear; clc;
 
-Tend = 100000;
+Tend = 2e6;
 
 % Uwaga:
 % Można zauważyć, że jakość dopasowania modelu zlinearyzowanego do
@@ -37,8 +37,8 @@ B(2,2) = 0;
 % Symulacja modeli nieliniowego i zlinearizowanego
 
 % Wychylenia od punktu równowagi:
-dF1 = @(t) 15*(t - 125 >= 1000) - 30*(t - 125 >= 50000);
-dFD = @(t) 15*(t >= 25000) - 30*(t >= 75000);
+dF1 = @(t) 100*(t>= 2e5) - 100*(t >= 1e6);
+dFD = @(t) 50*(t >= 5e5) - 50*(t >= 1.5e6);
 
 % Nieliniowy model dynamiczny
 h0 = [ h1_point ; h2_point ];
