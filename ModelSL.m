@@ -1,4 +1,4 @@
-%% Porównanie modelu nieliniowego i zlinearizowanego
+%% Porównanie modelu nieliniowego i modelu SL
 clear; clc;
 
 Tend = 2e6;
@@ -9,9 +9,7 @@ FD = @(t) 100 + 50*(t >= 5e5) - 50*(t >= 1.5e6);
 
 
 %% ---------------------------------------------------------------
-% Symulacja modeli nieliniowego i zlinearizowanego
-
-% Nieliniowy model dynamiczny
+% Model nieliniowy
 
 fNonlinear = @(t,h) [ ...
     ( F1(t) + FD(t) - 23 * sqrt(h(1))) / (0.7 * h(1)) ; ...
@@ -74,7 +72,7 @@ subplot(2,1,2);
 hold on;
 plot(tn, hn(:,2), 'b', 'LineWidth', 1.5); 
 plot(tl, hl(:,2), 'r--', 'LineWidth', 1.5);
-legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'northeast');
+legend('Model nieliniowy', 'Model SL', 'Location', 'northeast');
 grid on;
 grid minor
 xlabel('Czas [s]');
