@@ -2,15 +2,15 @@ clear; clc;
 
 Xend = 20;
 
-f = @(x) sin(2*x)./exp(0.2*x);
+f = @(x) x.^2;
 x = linspace(0, Xend, 1000);
 
-NumOfFuzzySets = 20;
+NumOfFuzzySets = 5;
 Xp = linspace(0, Xend, NumOfFuzzySets);
 DX = Xp(2) - Xp(1);
 
 mf = cell(1, NumOfFuzzySets);
-sigma = 0.6*DX;
+sigma = 0.4*DX;
 for i = 1:NumOfFuzzySets
     c = Xp(i);
     mf{i} = @(z) gaussmf(z, [sigma c]);

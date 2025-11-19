@@ -64,16 +64,23 @@ fLinear = @(t,dh) A*dh + B*[dF1(t); dFD(t)];
 [tl, dhl] = ode45(fLinear, [0, Tend], dh0, odeset('RelTol',1e-6));
 hl = dhl + [h1_point, h2_point];
 
-% Zlinearyzowany model dynamiczny - rozwiązany metodą Eulera
+%% ---------------------------------------------------------------
+% Metoda Eulera
+% Model dyskretny z próbkowaniem co 100sek dobrze przybliża model rzeczywisty.
 
-Ts = Tend/5e4;
+Ts = 100;
 te = 0:Ts:Tend;
 
-he = zeros(2, length(te));
-he(:,1) = h0;
+hne = zeros(2, length(te));
+hne(:,1) = h0;
 for k = 1:length(te)-1
-    dh = A*(he(:,k) - h0) + B*([F1(te(k)); FD(te(k))] - [Fin_point; Fd_point]);
-    he(:,k+1) = he(:,k) + dh*Ts;
+    hne(:,k+1) = hne(:,k) + ( fNonlinear(te(k), hne(:,k)) ) * Ts;
+end
+
+hle = zeros(2, length(te));
+hle(:,1) = h0;
+for k = 1:length(te)-1
+    hle(:,k+1) = hle(:,k) + ( A*(hle(:,k) - h0) + B*([F1(te(k)); FD(te(k))] - [Fin_point; Fd_point]) ) * Ts;
 end
 
 
@@ -83,16 +90,18 @@ subplot(2,1,1);
 hold on;
 plot(tn, hn(:,1), 'b', 'LineWidth', 1.5); 
 plot(tl, hl(:,1), 'r--', 'LineWidth', 1.5);
-plot(te, he(1,:), 'g:', 'LineWidth', 1.5);
-legend('Model nieliniowy', 'Model zlinearizowany', 'Model zlinearizowany (Euler)', 'Location', 'northeast');
+plot(te, hle(1,:), 'g:', 'LineWidth', 1.5);
+plot(te, hne(1,:), 'm-.', 'LineWidth', 1.5);
+legend('Model nieliniowy', 'Model zlinearizowany', 'Model zlinearizowany (Euler)', 'Model nieliniowy (Euler)', 'Location', 'northeast');
 grid on
 grid minor
 subplot(2,1,2);
 hold on;
 plot(tn, hn(:,2), 'b', 'LineWidth', 1.5); 
 plot(tl, hl(:,2), 'r--', 'LineWidth', 1.5);
-plot(te, he(2,:), 'g:', 'LineWidth', 1.5);
-legend('Model nieliniowy', 'Model zlinearizowany', 'Model zlinearizowany (Euler)', 'Location', 'northeast');
+plot(te, hle(2,:), 'g:', 'LineWidth', 1.5);
+plot(te, hne(2,:), 'm-.', 'LineWidth', 1.5);
+legend('Model nieliniowy', 'Model zlinearizowany', 'Model zlinearizowany (Euler)', 'Model nieliniowy (Euler)', 'Location', 'northeast');
 grid on;
 grid minor
 

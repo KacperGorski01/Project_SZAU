@@ -2,10 +2,10 @@ clear; clc;
 
 Xend = 20;
 
-f = @(x) sin(2*x)./exp(0.2*x);
+f = @(x) 0.2*x.^2 + 0.7*sqrt(x);
 x = linspace(0, Xend, 1000);
 
-NumOfFuzzySets = 40;
+NumOfFuzzySets = 5;
 Xp = linspace(0, Xend, NumOfFuzzySets);
 DX = Xp(2) - Xp(1);
 
