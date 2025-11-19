@@ -1,16 +1,17 @@
 clear; clc;
 
+Xstart = 2;
 Xend = 20;
 
-f = @(x) x.^2;
-x = linspace(0, Xend, 1000);
+f = @(x) 0.1*x.^2 - 0.2*(x-10).^2.*(x>10);
+x = linspace(Xstart, Xend, 10000);
 
 NumOfFuzzySets = 5;
-Xp = linspace(0, Xend, NumOfFuzzySets);
+Xp = linspace(Xstart, Xend, NumOfFuzzySets);
 DX = Xp(2) - Xp(1);
 
 mf = cell(1, NumOfFuzzySets);
-sigma = 0.4*DX;
+sigma = 0.3*DX;
 for i = 1:NumOfFuzzySets
     c = Xp(i);
     mf{i} = @(z) gaussmf(z, [sigma c]);

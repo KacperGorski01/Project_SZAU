@@ -1,49 +1,29 @@
 clear; clc;
 
+Xstart = 2;
 Xend = 20;
 
-f = @(x) 0.2*x.^2 + 0.7*sqrt(x);
-x = linspace(0, Xend, 1000);
+f = @(x) 0.1*x.^2 - 0.2*(x-10).^2.*(x>10);
+x = linspace(Xstart, Xend, 10000);
 
 NumOfFuzzySets = 5;
-Xp = linspace(0, Xend, NumOfFuzzySets);
+Xp = linspace(Xstart, Xend, NumOfFuzzySets);
 DX = Xp(2) - Xp(1);
 
 mf = cell(1, NumOfFuzzySets);
 for i = 1:NumOfFuzzySets
-    wsp = 0.1;
-    % a
-    if i == 1
-        a = Xp(i);
-    else
-        a = Xp(i) - (0.5 + wsp)*DX;
-    end
-    % d
-    if i == NumOfFuzzySets
-        d = Xp(i);
-    else
-        d = Xp(i) + (0.5 + wsp)*DX;
-    end
-    % b
-    if i == 1
-        b = Xp(i);
-    else
-        b = Xp(i) - (0.5 - wsp)*DX;
-    end
-    % c
-    if i == NumOfFuzzySets
-        c = Xp(i);
-    else
-        c = Xp(i) + (0.5 - wsp)*DX;
-    end
-
+    wsp = 0.05;
+    a = Xp(i) - (0.5 + wsp)*DX;
+    d = Xp(i) + (0.5 + wsp)*DX;
+    b = Xp(i) - (0.5 - wsp)*DX;
+    c = Xp(i) + (0.5 - wsp)*DX;
     mf{i} = @(z) trapmf(z, [a b c d]);
 end
 
 fLin = cell(1, NumOfFuzzySets);
 for i = 1:NumOfFuzzySets
     eps = 1e-8;
-    df = (f(Xp(i) + eps) - f(Xp(i) - eps)) / (2*eps);
+    df = ( f(Xp(i) + eps) - f(Xp(i)) ) / (eps);
     fLin{i} = @(x) df * (x - Xp(i)) + f(Xp(i));
 end
 
