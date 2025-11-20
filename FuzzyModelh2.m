@@ -1,10 +1,10 @@
 %% Porównanie modelu nieliniowego i zlinearizowanego
 clear; clc;
 
-Tend = 50e5;
+Tend = 32e5;
 h0 = [170; 100];
-F1 = @(t) 200 + 300*(t >= 4e5) - 350*(t >= 40e5);
-FD = @(t) 100 + 100*(t >= 30e5) - 100 *(t >= 45e5);
+F1 = @(t) 200 + 300*(t >= 2e5) - 200*(t >= 18e5);
+FD = @(t) 100 + 100*(t >= 10e5) - 100 *(t >= 24e5);
 
 % Model rozmyty bardzo dobrze odwzorowuje wyjście h2. Stan h1 jest odwzorowywany zdecydowanie gorzej, ale ponieważ będziemy robić regulator DMC gdzie h2 jest 
 % wyjściem układu, to właśnie na tym nam zależy, bo chcemy umieć robić dobrą predykcję wyjścia h2.
@@ -53,7 +53,7 @@ h2p = linspace(h2Range(1), h2Range(2), NumOfFuzzySets);
 Dh2p = h2p(2) - h2p(1);
 
 mf = cell(1, NumOfFuzzySets);
-sigma = 0.4*Dh2p;
+sigma = 0.5*Dh2p;
 for i = 1:NumOfFuzzySets
     c = h2p(i);
     mf{i} = @(z) gaussmf(z, [sigma c]);
