@@ -65,7 +65,7 @@ subplot(2,1,1);
 hold on;
 plot(tn, hn(:,1), 'b', 'LineWidth', 1.5); 
 plot(tl, hl(:,1), 'r--', 'LineWidth', 1.5);
-legend('Model nieliniowy', 'Model zlinearizowany', 'Location', 'northeast');
+legend('Model nieliniowy', 'Model SL', 'Location', 'northeast');
 grid on
 grid minor
 subplot(2,1,2);
