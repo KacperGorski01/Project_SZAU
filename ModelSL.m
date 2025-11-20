@@ -7,6 +7,9 @@ h0 = [ 170 ; 100 ];
 F1 = @(t) 200 + 100*(t>= 2e5) - 100*(t >= 1e6);
 FD = @(t) 100 + 50*(t >= 5e5) - 50*(t >= 1.5e6);
 
+% Model SL dopasowuje się dobrze do modelu nieliniowego, zarówno w stanach
+% ustalonych jak i całkiem nieźle w stanach przejściowych.
+
 
 %% ---------------------------------------------------------------
 % Model nieliniowy
