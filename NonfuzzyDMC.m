@@ -2,7 +2,7 @@
 clear; clc;
 
 
-%% ---------------------------------------------------------------
+% ---------------------------------------------------------------
 % Linearyzacja modelu nieliniowego
 
 % Punkt linearyzacji (punkt równowagi):
@@ -24,10 +24,10 @@ B(2,1) = 0;
 B(2,2) = 0;
 
 
-%% ---------------------------------------------------------------
+% ---------------------------------------------------------------
 % Identyfikacja skoku jednostkowego dla sterowania 
 
-Ts = 150; % okres próbkowania dla regulatora DMC
+Ts = 100; % okres próbkowania dla regulatora DMC
 Tend = 50000;
 T = Ts : Ts : Tend;
 
@@ -58,13 +58,13 @@ s = s1;
 clear t x y1 y2 s1 s2 T
 
 
-%% ---------------------------------------------------------------
-% Wyznaczenie macierzy DMC
+% ---------------------------------------------------------------
+% Wyznaczenie parametrów regulatora
 
 D = length(s);      % horyzont dynamiki
 N = round(D/100);   % horyzont predykcji
 Nu = 10;            % horyzont sterowania
-lambda = 4;         % współczynnik kary
+lambda = 100;         % współczynnik kary
 
 Mp = zeros(N, D-1);
 for i = 1 : N
@@ -101,15 +101,15 @@ clear Mp M K K1
 % Matlab numeruje indeksy od 1 !!!
 % Czyli dla indeksu 1 mamy chwilę '0*Ts sek', dla indeksu 2 mamy chwilę '1*Ts sek', itd.
 
-time = 0 : Ts : 1800000;             % czas symulacji
+time = 0 : Ts : 6e6;             % czas symulacji
 
 h = [170, 100];  % początkowa wartość stanów
 
-y = zeros(length(time), 1);     % wektor wyjść
+y = zeros(length(time), 1);     % wektor wyjść (h2)
 y(1) = h(1,2);                  % początkowa wartość wyjścia   
 
-y_zad = 100 + 20 * (time >= 400000) - 20 * (time >= 1000000);   % wartość zadana
-Fd = 100 + 10 * (time >= 700000) - 10 * (time >= 1300000);    % zakłócenia
+y_zad = 100 + 150*(time>0.1e6) + 150*(time>3e6);   % wartość zadana
+Fd = 100 + 100*(time>1.5e6) - 100*(time>4.5e6);    % zakłócenia
 
 Fin = zeros(length(time), 1);     % wektor sterowań
 
@@ -117,6 +117,8 @@ dUp1 = zeros(D-1, 1);            % wektor przyrostów sterowania z poprzednich k
 dUp2 = zeros(D-1, 1);            % wektor przyrostów zakłócenia z poprzednich kroków (początkowo zerowy)
 
 for k = 1 : length(time) - 1
+    fprintf('[%f %%]\n', 100 * k / length(time));
+
     % Aktualizacja wektora przyrostów zakłócenia z poprzednich kroków
     if k > 1
         dUp2 = [Fd(k) - Fd(k-1); dUp2(1 : end - 1)]; 
@@ -144,6 +146,8 @@ for k = 1 : length(time) - 1
     y(k+1) = h(2);
 end
 
+
+%% ---------------------------------------------------------------
 % rysujemy wykresy
 % (poprawiamy jeszcze ostatnią wartość sterowania, aby wykres był ładniejszy (zabieg kosmetyczny))
 Fin(end) = Fin(end-1);
