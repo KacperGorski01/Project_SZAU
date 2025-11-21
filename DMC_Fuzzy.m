@@ -1,4 +1,4 @@
-%% Porównanie modelu nieliniowego i zlinearizowanego
+%% Rozmyty DMC
 clear; clc;
 
 Ts = 100; % okres próbkowania dla regulatora DMC (jest wspólny dla wszystkich modeli)
@@ -71,7 +71,7 @@ for i = 1:NumOfFuzzySets
     D(i) = length(s{i});      % horyzont dynamiki
     N(i) = round(D(i)/100);   % horyzont predykcji
     Nu = 10;                  % horyzont sterowania
-    lambda = 100;              % współczynnik kary
+    lambda = 10;              % współczynnik kary
     
     Mp{i} = zeros(N(i), D(i)-1);
     for r = 1 : N(i)
@@ -111,15 +111,17 @@ clear M Mp K t x y s
 % Matlab numeruje indeksy od 1 !!!
 % Czyli dla indeksu 1 mamy chwilę '0*Ts sek', dla indeksu 2 mamy chwilę '1*Ts sek', itd.
 
-time = 0 : Ts : 6e6;             % czas symulacji
+Tend = 12e5;
+
+time = 0 : Ts : Tend;             % czas symulacji
 
 h = [170, 100];  % początkowa wartość stanów
 
 y = zeros(length(time), 1);     % wektor wyjść (h2)
 y(1) = h(1,2);                  % początkowa wartość wyjścia   
 
-y_zad = 100 + 150*(time>0.1e6) + 150*(time>3e6);   % wartość zadana
-Fd = 100 + 100*(time>1.5e6) - 100*(time>4.5e6);    % zakłócenia
+y_zad = 100 + 150*(time>0.1e5) - 200*(time>6e5);   % wartość zadana
+Fd = 100 + 50*(time>2.5e5) - 100*(time>8.5e5);    % zakłócenia
 
 Fin = zeros(length(time), 1);     % wektor sterowań
 
@@ -127,12 +129,7 @@ dUp1 = zeros(max(D)-1, 1);            % wektor przyrostów sterowania z poprzedn
 dUp2 = zeros(max(D)-1, 1);            % wektor przyrostów zakłócenia z poprzednich kroków (początkowo zerowy)
 
 for k = 1 : length(time) - 1
-    fprintf('[%f %%]\n', 100 * k / length(time));
-
-    % Aktualizacja wektora przyrostów zakłócenia z poprzednich kroków
-    if k > 1
-        dUp2 = [Fd(k) - Fd(k-1); dUp2(1 : end - 1)]; 
-    end
+    fprintf('[%f %%]\n', 100 * k / (length(time)-1));
 
     % Obliczanie przyrostu sterowania
     du1__ = zeros(1, NumOfFuzzySets);
@@ -142,9 +139,15 @@ for k = 1 : length(time) - 1
         du1__ (j) = ke{j} * ( y_zad(k) - y(k) ) - dot(kp{j}, dUp1(1 : D(j)-1) + dUp2(1 : D(j)-1));
     end
     du1 = dot(mf__, du1__) / sum(mf__);
+    du1 = min(max(du1, -50), 50);  % ograniczenie przyrostu sterowania
 
     % Aktualizacja wektora przyrostów sterowania z poprzednich kroków
     dUp1 = [du1; dUp1(1 : end - 1)];
+
+    % Aktualizacja wektora przyrostów zakłócenia z poprzednich kroków
+    if k > 1
+        dUp2 = [Fd(k) - Fd(k-1); dUp2(1 : end - 1)]; 
+    end
     
     % Aktualizacja sterowania
     if k > 1
@@ -152,6 +155,8 @@ for k = 1 : length(time) - 1
     else
         Fin(k) = du1 + 200;
     end
+
+    Fin(k) = min(max(Fin(k), 0), 700); % ograniczenie sterowania
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
     f2 = @(t_,h_) [ ...
@@ -160,6 +165,7 @@ for k = 1 : length(time) - 1
     ];
     [~, h_temp] = ode45(f2, [time(k) time(k+1)], h, odeset('RelTol',1e-3));
     h = h_temp(end,:);
+    h(h < 1e-6) = 1e-6;
     y(k+1) = h(2);
 end
 
