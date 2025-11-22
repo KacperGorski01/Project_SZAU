@@ -1,4 +1,4 @@
-%% DMC z sukcesywną linearyzacją
+%% DMC z sukcesywną linearyzacją - analityczny
 clear; clc;
 
 Tend = 12e5;

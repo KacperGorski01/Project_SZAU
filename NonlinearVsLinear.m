@@ -37,8 +37,8 @@ B(2,2) = 0;
 % Symulacja modeli nieliniowego i zlinearizowanego
 
 % Wychylenia od punktu równowagi:
-dF1 = @(t) 100*(t>= 2e5) - 100*(t >= 1e6);
-dFD = @(t) 50*(t >= 5e5) - 50*(t >= 1.5e6);
+dF1 = @(t) 100*(t>= 2e5) - 150*(t >= 1e6);
+dFD = @(t) 50*(t >= 5e5) - 100*(t >= 1.5e6);
 
 % Nieliniowy model dynamiczny
 h0 = [ h1_point ; h2_point ];

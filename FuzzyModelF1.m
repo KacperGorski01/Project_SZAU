@@ -6,14 +6,6 @@ h0 = [170; 100];
 F1 = @(t) 200 + 300*(t >= 4e5) - 350*(t >= 40e5);
 FD = @(t) 100 + 50*(t >= 30e5) - 50 *(t >= 45e5);
 
-% W stanach przejściowych model rozmyty dalej zachowuje się niezbyt dobrze
-% podobnie jak model liniowy, ale w stanach ustalownych dopasowuje się
-% bardzo dobrze do modelu nieliniowego. Warto zauważyć, że stany
-% przejściowe dla wysokości h1 też są dobrze odwzorowane, natomiast
-% problematyczne jest h2 ze względu na długi czas reakcji. 
-% My rozmywamy tylko F1, a Fd traktujemy jako zakłócenie (z założenia bliskie 100), ale można by zrobić rozmycie po parze F1, Fd.
-% W ten sposób model rozmyty mógłby lepiej reagować na zmiany zakłócenia i moglibyśmy zaprojektować zakres pracy Fd.
-
 
 %% ---------------------------------------------------------------
 % Model nieliniowy dynamiczny

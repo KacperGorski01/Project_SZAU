@@ -1,4 +1,4 @@
-%% Konwencjonalny regulator DMC
+%% Zwykły liniowy regulator DMC
 clear; clc;
 
 Ts = 100; % okres próbkowania dla regulatora DMC
