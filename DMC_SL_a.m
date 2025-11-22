@@ -16,10 +16,12 @@ Fd = 100 + 50*(time>2.5e5) - 100*(time>8.5e5);    % zakłócenia
 
 Fin = zeros(length(time), 1);     % wektor sterowań
 
-D = 20e3;           % horyzont dynamiki
+D = 15e3;           % horyzont dynamiki
 N = 500;            % horyzont predykcji
 Nu = 10;            % horyzont sterowania
 lambda = 10;        % współczynnik kary
+
+TT = Ts:Ts:D*Ts;
 
 s = zeros(1, D);
 Mp = zeros(N, D-1);
@@ -52,11 +54,8 @@ for k = 1 : length(time) - 1
     B(2,1) = 0;
     B(2,2) = 0;
 
-    x = [0; 0];
-    for i = 1 : D
-        x = x + Ts * (A * x + B * [1; 0]);
-        s(i) = x(2);
-    end
+    [tTmp, xTmp] = ode45(@(t_,x_) A*x_ + B*[1;0], [0;D*Ts], [0;0]);
+    s = interp1(tTmp, xTmp(:,2), TT);
 
     for i = 1 : N
     for j = 1 : D-1
@@ -105,12 +104,13 @@ for k = 1 : length(time) - 1
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
     f2 = @(t_,h_) [ ...
-        ( Fin(k) + Fd(k) - 23 * sqrt(h_(1))) / (0.7 * (h_(1))) ; ...
-        ( 23 * sqrt(h_(1)) - 30 * sqrt(h_(2))) / (1.35 * (h_(2))^2) ...
+        ( Fin(k) + Fd(k) - 23 * sqrt(max(h_(1), 1e-6))) / (0.7 * max(h_(1), 1e-6)) ; ...
+        ( 23 * sqrt(max(h_(1), 1e-6)) - 30 * sqrt(max(h_(2), 1e-6))) / (1.35 * (max(h_(2), 1e-6))^2) ...
     ];
     [~, h_temp] = ode45(f2, [time(k) time(k+1)], h, odeset('RelTol',1e-3));
     h = h_temp(end,:);
-    h(h < 0.1) = 0.1;
+    h(1) = max(h(1), 1e-6);
+    h(2) = max(h(2), 1e-6);
     y(k+1) = h(2);
 end
 
@@ -143,3 +143,5 @@ title('Zakłócenie F_{D} [cm^3/s]')
 xlabel('Czas [s]')
 grid on
 grid minor
+
+

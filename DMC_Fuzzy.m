@@ -15,7 +15,7 @@ h2p = linspace(h2Range(1), h2Range(2), NumOfFuzzySets);
 Dh2p = h2p(2) - h2p(1);
 
 mf = cell(1, NumOfFuzzySets);
-sigma = 0.5*Dh2p;
+sigma = 0.9*Dh2p;
 for i = 1:NumOfFuzzySets
     c = h2p(i);
     mf{i} = @(z) gaussmf(z, [sigma c]);
@@ -120,8 +120,8 @@ h = [170, 100];  % początkowa wartość stanów
 y = zeros(length(time), 1);     % wektor wyjść (h2)
 y(1) = h(1,2);                  % początkowa wartość wyjścia   
 
-y_zad = 100 + 150*(time>0.1e5) - 200*(time>6e5);   % wartość zadana
-Fd = 100 + 50*(time>2.5e5) - 100*(time>8.5e5);    % zakłócenia
+y_zad = 100 + 70*(time>0.1e5) - 140*(time>6e5);   % wartość zadana
+Fd = 100 + 40*(time>2.5e5) - 80*(time>8.5e5);    % zakłócenia
 
 Fin = zeros(length(time), 1);     % wektor sterowań
 
@@ -160,12 +160,13 @@ for k = 1 : length(time) - 1
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
     f2 = @(t_,h_) [ ...
-        ( Fin(k) + Fd(k) - 23 * sqrt(h_(1))) / (0.7 * (h_(1))) ; ...
-        ( 23 * sqrt(h_(1)) - 30 * sqrt(h_(2))) / (1.35 * (h_(2))^2) ...
+        ( Fin(k) + Fd(k) - 23 * sqrt(max(h_(1), 1e-6))) / (0.7 * max(h_(1), 1e-6)) ; ...
+        ( 23 * sqrt(max(h_(1), 1e-6)) - 30 * sqrt(max(h_(2), 1e-6))) / (1.35 * (max(h_(2), 1e-6))^2) ...
     ];
     [~, h_temp] = ode45(f2, [time(k) time(k+1)], h, odeset('RelTol',1e-3));
     h = h_temp(end,:);
-    h(h < 1e-6) = 1e-6;
+    h(1) = max(h(1), 1e-6);
+    h(2) = max(h(2), 1e-6);
     y(k+1) = h(2);
 end
 

@@ -113,7 +113,6 @@ y(1) = h(1,2);                  % początkowa wartość wyjścia
 y_zad = 100 + 150*(time>0.1e5) - 200*(time>6e5);   % wartość zadana
 Fd = 100 + 50*(time>2.5e5) - 100*(time>8.5e5);    % zakłócenia
 
-
 Fin = zeros(length(time), 1);     % wektor sterowań
 
 dUp1 = zeros(D-1, 1);            % wektor przyrostów sterowania z poprzednich kroków (początkowo zerowy)
@@ -124,7 +123,7 @@ for k = 1 : length(time) - 1
 
     % Obliczanie przyrostu sterowania
     du1 = ke * ( y_zad(k) - y(k) ) - dot(kp, dUp1 + dUp2);
-    du1 = min(max(du1, -100), 100);  % ograniczenie przyrostu sterowania
+    du1 = min(max(du1, -50), 50);  % ograniczenie przyrostu sterowania
 
     % Aktualizacja wektora przyrostów sterowania z poprzednich kroków
     dUp1 = [du1; dUp1(1 : end - 1)];
@@ -145,12 +144,13 @@ for k = 1 : length(time) - 1
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
     f2 = @(t_,h_) [ ...
-        ( Fin(k) + Fd(k) - 23 * sqrt(h_(1))) / (0.7 * (h_(1))) ; ...
-        ( 23 * sqrt(h_(1)) - 30 * sqrt(h_(2))) / (1.35 * (h_(2))^2) ...
+        ( Fin(k) + Fd(k) - 23 * sqrt(max(h_(1), 1e-6))) / (0.7 * max(h_(1), 1e-6)) ; ...
+        ( 23 * sqrt(max(h_(1), 1e-6)) - 30 * sqrt(max(h_(2), 1e-6))) / (1.35 * (max(h_(2), 1e-6))^2) ...
     ];
     [~, h_temp] = ode45(f2, [time(k) time(k+1)], h, odeset('RelTol',1e-3));
     h = h_temp(end,:);
-    h(h < 1e-6) = 1e-6;
+    h(1) = max(h(1), 1e-6);
+    h(2) = max(h(2), 1e-6);
     y(k+1) = h(2);
 end
 
