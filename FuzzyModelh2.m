@@ -1,4 +1,4 @@
-%% Porównanie modelu nieliniowego i zlinearizowanego
+%% Porównanie modelu nieliniowego i modelu rozmytego
 clear; clc;
 
 Tend = 32e5;
