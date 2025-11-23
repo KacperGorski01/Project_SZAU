@@ -1,4 +1,7 @@
 %% DMC z sukcesywną linearyzacją - numeryczny
+
+% Uwaga: Z racji na dużo obliczeń w każdej iteracji symulacji skrypt może działać dość długo (nawet 30min)
+
 clear; clc;
 
 Tend = 12e5;
