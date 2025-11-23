@@ -1,9 +1,12 @@
 %% Rozmyty DMC
 clear; clc;
 
-Ts = 100; % okres próbkowania dla regulatora DMC (jest wspólny dla wszystkich modeli)
+Ts = 125/2; % okres próbkowania dla regulatora DMC (jest wspólny dla wszystkich modeli)
+% dla wejścia bez opóźnienia działało dobrze Ts = 100 sek, dlatego uwzględniając opóźnienie 125s przyjeliśmy 125/2 sek
+% tak, że opóźnienie wynosi dokładnie 2 okresy próbkowania (łatwiej wtedy implementować opóźnienie w symulacji)
 
-% ---------------------------------------------------------------
+
+%% ---------------------------------------------------------------
 % Identyfikacja skoku jednostkowego dla sterowania
 % i przygotowanie parametrów regulatorów DMC.
 
@@ -29,6 +32,7 @@ for i = 1:NumOfFuzzySets
     T{i} = Ts : Ts : Tend(i);
 end
 
+% W celu weryfikacji wyświetlaliśmy pobrane odpowiedzi skokowe (teraz zakomentowane)
 % figure(1);
 % hold on
 
@@ -61,7 +65,7 @@ for i = 1:NumOfFuzzySets
     B(2,1) = 0;
     B(2,2) = 0;
 
-    fLin = @(t_,x_) A*x_ + B*[(t_ >= 0); 0];
+    fLin = @(t_,x_) A*x_ + B*[(t_ - 125 >= 0); 0];
     [t, x] = ode45(fLin, [0, Tend(i)], [0; 0], odeset('RelTol',1e-6));
     y = x(:,2);
     s{i} = interp1(t, y, T{i});
@@ -120,8 +124,8 @@ h = [170, 100];  % początkowa wartość stanów
 y = zeros(length(time), 1);     % wektor wyjść (h2)
 y(1) = h(1,2);                  % początkowa wartość wyjścia   
 
-y_zad = 100 + 70*(time>0.1e5) - 140*(time>6e5);   % wartość zadana
-Fd = 100 + 40*(time>2.5e5) - 80*(time>8.5e5);    % zakłócenia
+y_zad = 100 + 150*(time>0.1e5) - 200*(time>6e5);   % wartość zadana
+Fd = 100 + 50*(time>2.5e5) - 100*(time>8.5e5);    % zakłócenia
 
 Fin = zeros(length(time), 1);     % wektor sterowań
 
@@ -159,8 +163,14 @@ for k = 1 : length(time) - 1
     Fin(k) = min(max(Fin(k), 0), 700); % ograniczenie sterowania
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
+    % Uwzględniamy opóźnienie sterowania równe 125s (czyli 2 okresy próbkowania Ts)
+    if k > 2
+        Fin_ = Fin(k-2);
+    else
+        Fin_ = 200;
+    end
     f2 = @(t_,h_) [ ...
-        ( Fin(k) + Fd(k) - 23 * sqrt(max(h_(1), 1e-6))) / (0.7 * max(h_(1), 1e-6)) ; ...
+        ( Fin_ + Fd(k) - 23 * sqrt(max(h_(1), 1e-6))) / (0.7 * max(h_(1), 1e-6)) ; ...
         ( 23 * sqrt(max(h_(1), 1e-6)) - 30 * sqrt(max(h_(2), 1e-6))) / (1.35 * (max(h_(2), 1e-6))^2) ...
     ];
     [~, h_temp] = ode45(f2, [time(k) time(k+1)], h, odeset('RelTol',1e-3));
