@@ -113,8 +113,8 @@ h = [170, 100];  % początkowa wartość stanów
 y = zeros(length(time), 1);     % wektor wyjść (h2)
 y(1) = h(1,2);                  % początkowa wartość wyjścia   
 
-y_zad = 100 + 20*(time>0.1e5) - 40*(time>6e5);   % wartość zadana
-Fd = 100 + 20*(time>2.5e5) - 40*(time>8.5e5);    % zakłócenia
+y_zad = 100 + 150*(time>0.1e5) - 200*(time>6e5);   % wartość zadana
+Fd = 100 + 50*(time>2.5e5) - 100*(time>8.5e5);    % zakłócenia
 
 Fin = zeros(length(time), 1);     % wektor sterowań
 

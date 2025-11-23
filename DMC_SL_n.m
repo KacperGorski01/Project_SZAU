@@ -2,7 +2,9 @@
 clear; clc;
 
 Tend = 12e5;
-Ts = 100; % okres próbkowania dla regulatora DMC
+Ts = 125/2; % okres próbkowania dla regulatora DMC
+% dla wejścia bez opóźnienia działało dobrze Ts = 100 sek, dlatego uwzględniając opóźnienie 125s przyjeliśmy 125/2 sek
+% tak, że opóźnienie wynosi dokładnie 2 okresy próbkowania (łatwiej wtedy implementować opóźnienie w symulacji)
 
 time = 0 : Ts : Tend;             % czas symulacji
 
@@ -54,7 +56,7 @@ for k = 1 : length(time) - 1
     B(2,1) = 0;
     B(2,2) = 0;
 
-    [tTmp, xTmp] = ode45(@(t_,x_) A*x_ + B*[1;0], [0;D*Ts], [0;0]);
+    [tTmp, xTmp] = ode45(@(t_,x_) A*x_ + B*[(t_ - 125 >= 0);0], [0;D*Ts], [0;0]);
     s = interp1(tTmp, xTmp(:,2), TT);
 
     for i = 1 : N
@@ -105,8 +107,14 @@ for k = 1 : length(time) - 1
     Fin(k) = min(max(Fin(k), 0), 700); % ograniczenie sterowania
     
     % Przy nowym sterowaniu obliczamy wyjście w następnej chwili próbkowania.
+    % Uwzględniamy opóźnienie sterowania równe 125s (czyli 2 okresy próbkowania Ts)
+    if k > 2
+        Fin_ = Fin(k-2);
+    else
+        Fin_ = 200;
+    end
     f2 = @(t_,h_) [ ...
-        ( Fin(k) + Fd(k) - 23 * sqrt(max(h_(1), 1e-6))) / (0.7 * max(h_(1), 1e-6)) ; ...
+        ( Fin_ + Fd(k) - 23 * sqrt(max(h_(1), 1e-6))) / (0.7 * max(h_(1), 1e-6)) ; ...
         ( 23 * sqrt(max(h_(1), 1e-6)) - 30 * sqrt(max(h_(2), 1e-6))) / (1.35 * (max(h_(2), 1e-6))^2) ...
     ];
     [~, h_temp] = ode45(f2, [time(k) time(k+1)], h, odeset('RelTol',1e-3));

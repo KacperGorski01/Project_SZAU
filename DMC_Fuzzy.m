@@ -75,7 +75,7 @@ for i = 1:NumOfFuzzySets
     D(i) = length(s{i});      % horyzont dynamiki
     N(i) = round(D(i)/100);   % horyzont predykcji
     Nu = 10;                  % horyzont sterowania
-    lambda = 10;              % współczynnik kary
+    lambda = 20;              % współczynnik kary
     
     Mp{i} = zeros(N(i), D(i)-1);
     for r = 1 : N(i)
